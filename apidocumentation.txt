@@ -1,0 +1,20 @@
+
+vendor
+
+category
+url:http://127.0.0.1:8000/vendor/category/
+method:post
+authorization:token
+data: name
+
+reviews
+url:http://127.0.0.1:8000/vendor/foods/<int:pk>/review_list/
+method:get
+authorization:token
+data:nill
+
+order
+url:http://127.0.0.1:8000/vendor/foods/<int:pk>/order_list/
+method:get
+authorization:token
+data:nill

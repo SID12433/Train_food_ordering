@@ -1,0 +1,22 @@
+vendor signup(registration)
+================================================
+
+
+url:http://127.0.0.1:8000/vendor/register/
+method:post
+body:{"username","password","email","phone"}
+authorization:nill
+
+
+obtain token
+======================================
+
+url:http://127.0.0.1:8000/vendor/token/
+method:post
+body:username,password
+headers:nill
+
+
+vendor- category adding
+=================================================
+
