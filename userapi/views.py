@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from admin1.models import Customer,Food,Review,Order,Cart,CartItem,Category,Vendor
-from userapi.serializers import CustomerSerializer,CategorySerializer,VendorSerializer,FoodSerializer,CartSerializer,CartItemsSerializer,ReviewSerializer,OrderSerializer,RestaurantReviewSerializer
+from userapi.serializers import CustomerSerializer,CategorySerializer,VendorSerializer,FoodSerializer,CartSerializer,CartItemsSerializer,ReviewSerializer,OrderSerializer,RestaurantReviewSerializer,ProfileSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet,ViewSet
@@ -25,6 +25,37 @@ class CustomerCreationView(APIView):
             return Response(data=serializer.data)
         else:
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+class ProfileView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        user_id = request.user.id
+        try:
+            customer = Customer.objects.get(id=user_id)
+            serializer = ProfileSerializer(customer)
+            return Response(serializer.data)
+        except customer.DoesNotExist:
+            return Response({"error": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, *args, **kwargs): 
+        user_id = request.user.id
+        try:
+            customer = Customer.objects.get(id=user_id)
+        except customer.DoesNotExist:
+            return Response({"error": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProfileSerializer(instance=customer, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
         
 class CategoryView(ViewSet):
     authentication_classes=[authentication.TokenAuthentication]
@@ -56,26 +87,25 @@ class VendorView(ViewSet):
     permission_classes=[permissions.IsAuthenticated]
     serializer_class = VendorSerializer
         
+        
     def list(self,request,*args,**kwargs):
         qs=Vendor.objects.all()
         serializer=VendorSerializer(qs,many=True)
         return Response(data=serializer.data)
     
-    # def retrieve(self,request,*args,**kwargs):
-    #     id=kwargs.get("pk")
-    #     qs=Vendor.objects.get(id=id)
-    #     serializer=VendorSerializer(qs)
-    #     return Response(data=serializer.data)
+
     
     def retrieve(self, request, *args, **kwargs):
         try:
             vendor = Vendor.objects.get(pk=kwargs.get("pk"))
         except vendor.DoesNotExist:
             return Response({"error": "vendor does not exist"},status=status.HTTP_404_NOT_FOUND)
-        vendor_serializer = VendorSerializer(vendor)
-        category_serializer = CategorySerializer(vendor.category_set.all(), many=True)
-        response_data = vendor_serializer.data
+        vendor_serializer=VendorSerializer(vendor)
+        category_serializer=CategorySerializer(vendor.category_set.all(), many=True)
+        review_serializer=RestaurantReviewSerializer(vendor.restaurantreview_set.all(), many=True)
+        response_data=vendor_serializer.data
         response_data['categories'] = category_serializer.data
+        response_data['reviews'] = review_serializer.data
         return Response(response_data)
     
     
@@ -101,6 +131,7 @@ class FoodView(ViewSet):
         qs=Food.objects.filter(is_active=True)
         serializer=FoodSerializer(qs,many=True)
         return Response(data=serializer.data)
+    
     
     @action(methods=["post"],detail=True)
     def add_to_cart(self, request, *args, **kwargs):
@@ -142,6 +173,7 @@ class FoodView(ViewSet):
     
      
 razorpay_client = razorpay.Client(auth=("rzp_test_dGbzyUivWJNxDV", "4iYJQWiT6WT7xYcl1JdHSD3a"))
+
 
 class CartView(ViewSet):
     authentication_classes = [authentication.TokenAuthentication]
@@ -195,6 +227,17 @@ class CartView(ViewSet):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-def sign_out(request):
-    logout(request)
-    return render("signin")
+class VendorSearchView(APIView):
+    def post(self, request, format=None):
+        address = request.data.get('location')
+        if not address:
+            return Response({"error": "Address parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        vendors = Vendor.objects.filter(address__icontains=address)
+        serializer = VendorSerializer(vendors, many=True)
+        return Response(serializer.data)
+    
+
+
+
+
+

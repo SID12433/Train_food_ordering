@@ -22,6 +22,15 @@ class VendorSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Vendor.objects.create_user(**validated_data)
     
+    
+class ProfileSerializer(serializers.ModelSerializer):
+    id=serializers.CharField(read_only=True)
+
+    class Meta:
+        model=Vendor
+        fields=["id","username","email","phone","name","description","address","website","logo"]  
+
+    
 class CategorySerializer(serializers.ModelSerializer):
     id=serializers.CharField(read_only=True)
     is_active=serializers.BooleanField(read_only=True)
@@ -45,12 +54,49 @@ class FoodSerializer(serializers.ModelSerializer):
     is_active=serializers.BooleanField(read_only=True)
     class Meta:
         model = Food
-        fields = ["id","name","description","price","image","is_active","category"]
+        fields = ["id","name","description","price","image","is_active","category","type"]
+
+
+class FoodViewSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    category = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    offer = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Food
+        fields = ["id", "name", "description", "price", "image", "is_active", "category", "type", "offer","reviews"]
+
+    def get_offer(self, obj):
+        vendor = obj.vendor
+        offer = Offer.objects.filter(food=obj, vendors=vendor).first()
+        if offer:
+            return {
+                'price': offer.price,
+                'start_date': offer.start_date,
+                'due_date': offer.due_date,
+                'offer_status': offer.offer_status
+            }
+        return None
+    
+    def get_reviews(self, obj):
+        reviews = Review.objects.filter(food=obj)
+        return ReviewViewSerializer(reviews, many=True).data
+
+       
         
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model=Review
         fields="__all__"
+        
+        
+class ReviewViewSerializer(serializers.ModelSerializer):
+    user=serializers.CharField(source='user.name', read_only=True)
+    class Meta:
+        model=Review
+        fields=["id","user","rating","comment"]
         
 
 class CartItemsSerializer(serializers.ModelSerializer):

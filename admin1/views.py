@@ -14,14 +14,56 @@ from rest_framework import status
 from django.contrib.auth import logout
 
 
+class VendorView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
 
-# Create your views here.
 
-class CustomerCreationView(APIView):
-    def post(self,request,*args,**kwargs):
-        serializer=CustomerSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user_type="customer")
-            return Response(data=serializer.data)
-        else:
-            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def list(self,request,*args,**kwargs):
+        qs=Vendor.objects.all()
+        serializer=VendorSerializer(qs,many=True)
+        return Response(data=serializer.data)
+    
+        
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Vendor.objects.get(id=id)
+        serializer=VendorSerializer(qs)
+        return Response(data=serializer.data)
+
+        
+
+class CustomerView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
+
+
+    def list(self,request,*args,**kwargs):
+        qs=Customer.objects.all()
+        serializer=CustomerSerializer(qs,many=True)
+        return Response(data=serializer.data)
+    
+        
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Customer.objects.get(id=id)
+        serializer=CustomerSerializer(qs)
+        return Response(data=serializer.data)
+    
+    
+class OrdersView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
+
+
+    def list(self,request,*args,**kwargs):
+        qs=Order.objects.all()
+        serializer=OrderSerializer(qs,many=True)
+        return Response(data=serializer.data)
+    
+        
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Order.objects.get(id=id)
+        serializer=OrderSerializer(qs)
+        return Response(data=serializer.data)

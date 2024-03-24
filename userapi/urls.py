@@ -8,12 +8,13 @@ router.register("category",views.CategoryView,basename="category")
 router.register("vendors",views.VendorView,basename="vendor_list")
 router.register("food",views.FoodView,basename="food")
 router.register("cart",views.CartView,basename="cart_list")
+router.register("profile",views.ProfileView,basename="profile")
 
 
 urlpatterns = [
     path("register/",views.CustomerCreationView.as_view(),name="signup"),
     path("token/",ObtainAuthToken.as_view(),name="token"),
-    path("logout/",views.sign_out,name="logout"),
+    path("search/",views.VendorSearchView.as_view(),name="search"),
 
     
 ] +router.urls

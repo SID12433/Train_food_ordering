@@ -46,25 +46,6 @@ class Customer(CustomUser):
 
     def __str__(self):
         return self.name
-    
-
-    # def save(self, *args, **kwargs):
-    #     if not self.location:
-    #         self.location = self.geocode_address(self.address)
-    #     super().save(*args, **kwargs)
-
-    # def geocode_address(self, address):
-    #     api_key = 'YOUR_GOOGLE_MAPS_API_KEY'
-    #     base_url = 'https://maps.googleapis.com/maps/api/geocode/json'
-    #     params = {'address': address, 'key': api_key}
-    #     response = requests.get(base_url, params=params)
-    #     data = response.json()
-
-    #     if data['status'] == 'OK':
-    #         location = data['results'][0]['geometry']['location']
-    #         return Point(location['lng'], location['lat'])
-    #     else:
-    #         return None
    
 
 
@@ -86,6 +67,7 @@ class Food(models.Model):
     price=models.PositiveIntegerField()
     description=models.CharField(max_length=500)
     is_active=models.BooleanField(default=True)
+    type=models.CharField(max_length=500,default="veg")
 
     def __str__(self):
         return self.name

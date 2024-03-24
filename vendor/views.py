@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import mixins,generics
-from vendor.serializers import VendorSerializer,CategorySerializer,FoodSerializer,OfferSerializer,ReviewSerializer,OrderSerializer
+from vendor.serializers import VendorSerializer,CategorySerializer,FoodSerializer,OfferSerializer,ReviewSerializer,OrderSerializer,FoodViewSerializer,ProfileSerializer
 from admin1.models import Vendor,Category,Food,Offer,Review,Order
 from rest_framework.views import APIView,View
 from rest_framework.generics import ListAPIView
@@ -16,6 +16,8 @@ from django.http import JsonResponse
 import requests
 from datetime import datetime
 from django.contrib.auth import logout
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView,status
 
 
 
@@ -36,10 +38,41 @@ class VendorCreationView(APIView):
 
 
 
+class ProfileView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        user_id = request.user.id
+        try:
+            vendor = Vendor.objects.get(id=user_id)
+            serializer = ProfileSerializer(vendor)
+            return Response(serializer.data)
+        except Vendor.DoesNotExist:
+            return Response({"error": "Vendor does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, *args, **kwargs): 
+        user_id = request.user.id
+        try:
+            vendor = Vendor.objects.get(id=user_id)
+        except Vendor.DoesNotExist:
+            return Response({"error": "Vendor does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProfileSerializer(instance=vendor, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
 class CategoryView(ViewSet):
     authentication_classes=[authentication.TokenAuthentication]
     permission_classes=[permissions.IsAuthenticated]
     serializer_class = CategorySerializer
+    
     
     def create(self,request,*args,**kwargs):
         serializer=CategorySerializer(data=request.data)
@@ -62,21 +95,29 @@ class CategoryView(ViewSet):
         serializer=CategorySerializer(qs,many=True)
         return Response(data=serializer.data)
     
-    def retrieve(self,request,*args,**kwargs):
-        id=kwargs.get("pk")
-        qs=Category.objects.get(id=id)
-        serializer=CategorySerializer(qs)
-        return Response(data=serializer.data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            category=Category.objects.get(pk=kwargs.get("pk"))
+        except category.DoesNotExist:
+            return Response({"error": "category does not exist"},status=status.HTTP_404_NOT_FOUND)
+        category_serializer = CategorySerializer(category)
+        food_serializer = FoodSerializer(category.food_set.all(),many=True)
+        response_data = category_serializer.data
+        response_data['foods'] = food_serializer.data
+        return Response(response_data)
     
     
     def destroy(self,request,*args,**kwargs):
-        id = kwargs.get("pk")
-        category = Category.objects.get(id=id)
-        category.is_active = False
-        category.save()
-        return Response(data={"message": "category is now inactive"})
+        id=kwargs.get("pk")
+        instance=Category.objects.get(id=id)
+        if instance.vendor==request.user.vendor:
+            instance.delete()
+            return Response(data={"msg":"deleted"})
+        else:
+            return Response(data={"message":"permission denied"})
     
-    # http://127.0.0.1:8000/vendor/foods/1
+    
     @action(methods=["post"],detail=True)
     def add_food(self,request,*args,**kwargs):
         serializer=FoodSerializer(data=request.data)
@@ -96,12 +137,25 @@ class FoodView(ViewSet):
     permission_classes=[permissions.IsAuthenticated]
     serializer_class = FoodSerializer
 
-   
+
     def list(self,request,*args,**kwargs):
-        print(request.user.vendor.id)
-        qs=Food.objects.filter(vendor=request.user.vendor.id)
-        serializer=FoodSerializer(qs,many=True)
+        vendor_id=request.user.id
+        vendor_object=Vendor.objects.get(id=vendor_id)
+        qs=Food.objects.filter(vendor=vendor_object)
+        serializer=FoodViewSerializer(qs,many=True)
         return Response(data=serializer.data)
+    
+        
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Food.objects.get(id=id)
+        if qs.vendor==request.user.vendor:
+            serializer=FoodViewSerializer(qs)
+            return Response(data=serializer.data)
+        else:
+            return Response(data={"message":"permission denied"})
+    
+    
     
     def update(self,request,*args,**kwargs): 
         id=kwargs.get("pk")
@@ -128,15 +182,7 @@ class FoodView(ViewSet):
         else:
             return Response(data={"message":"permission denied"})
 
-    
-    def retrieve(self,request,*args,**kwargs):
-        id=kwargs.get("pk")
-        qs=Food.objects.get(id=id)
-        if qs.vendor==request.user.vendor:
-            serializer=FoodSerializer(qs)
-            return Response(data=serializer.data)
-        else:
-            return Response(data={"message":"permission denied"})
+
     
     @action(methods=["post"],detail=True)
     def offer_add(self,request,*args,**kwargs):
@@ -172,14 +218,18 @@ class OfferView(ViewSet):
         serializer=OfferSerializer(qs,many=True)
         return Response(data=serializer.data)
     
-    def destroy(self,request,args,*kwargs):
-        id=kwargs.get("pk")
-        instance=Offer.objects.get(id=id)
-        if instance.vendors==request.user.vendor:
-            instance.delete()
-            return Response(data={"msg":"offer deleted"})
+    def destroy(self, request, *args, **kwargs):
+        offer_id = kwargs.get("pk")
+        try:
+            offer = Offer.objects.get(id=offer_id)
+        except Offer.DoesNotExist:
+            return Response(data={"error": "Offer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if offer.vendors == request.user.vendor:
+            offer.delete()
+            return Response(data={"msg": "Offer deleted"})
         else:
-            return Response(data={"message":"permission denied"})
+            return Response(data={"message": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
         
 
 class OrderView(ViewSet):
