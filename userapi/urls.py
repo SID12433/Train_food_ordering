@@ -15,6 +15,7 @@ urlpatterns = [
     path("register/",views.CustomerCreationView.as_view(),name="signup"),
     path("token/",ObtainAuthToken.as_view(),name="token"),
     path("search/",views.VendorSearchView.as_view(),name="search"),
+    path("searchfood/",views.FoodSearchView.as_view(),name="foodsearch"),
 
     
 ] +router.urls

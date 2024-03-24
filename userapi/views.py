@@ -236,6 +236,25 @@ class VendorSearchView(APIView):
         serializer = VendorSerializer(vendors, many=True)
         return Response(serializer.data)
     
+    
+class FoodSearchView(APIView):
+    def post(self, request, format=None):
+        food = request.data.get('food')
+        type = request.data.get('type')
+
+        if not food and not type:
+            return Response({"error": "At least one of 'food' or 'type' parameters is required."}, status=status.HTTP_400_BAD_REQUEST)
+        filter_conditions = {}
+        if food:
+            filter_conditions['name__icontains'] = food
+        if type:
+            filter_conditions['type__icontains'] = type
+        foods = Food.objects.filter(**filter_conditions)
+        if foods.exists():
+            serializer = FoodSerializer(foods, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({"message": "No food items found matching the search criteria."}, status=status.HTTP_404_NOT_FOUND)
 
 
 
