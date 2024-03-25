@@ -13,6 +13,9 @@ import razorpay
 from rest_framework import status
 from django.contrib.auth import logout
 
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+
 
 
 # Create your views here.
@@ -22,10 +25,21 @@ class CustomerCreationView(APIView):
         serializer=CustomerSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user_type="customer")
-            return Response(data=serializer.data)
+            return Response(data={'status':1,'data':serializer.data})
         else:
-            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+            return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)        
+
+
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data,context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        user_type = user.user_type
         
+        return Response(data={'status':1,'data':{'token': token.key,'user_type': user_type,}})        
         
         
 class ProfileView(ViewSet):
@@ -37,23 +51,26 @@ class ProfileView(ViewSet):
         try:
             customer = Customer.objects.get(id=user_id)
             serializer = ProfileSerializer(customer)
-            return Response(serializer.data)
+            return Response(data={'status':1,'data':serializer.data})
         except customer.DoesNotExist:
-            return Response({"error": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(data={'status':0,"msg": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+
 
     def put(self, request, *args, **kwargs): 
         user_id = request.user.id
         try:
             customer = Customer.objects.get(id=user_id)
         except customer.DoesNotExist:
-            return Response({"error": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(data={'status':0,"msg": "Customer does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = ProfileSerializer(instance=customer, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(data={'status':1,'data':serializer.data})
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+            return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)        
         
         
         
@@ -65,19 +82,19 @@ class CategoryView(ViewSet):
     def list(self,request,*args,**kwargs):
         qs=Category.objects.filter(is_active=True)
         serializer=CategorySerializer(qs,many=True)
-        return Response(data=serializer.data)
+        return Response(data={'status':1,'data':serializer.data})
 
 
     def retrieve(self, request, *args, **kwargs):
         try:
             category = Category.objects.get(pk=kwargs.get("pk"))
         except category.DoesNotExist:
-            return Response({"error": "category does not exist"},status=status.HTTP_404_NOT_FOUND)
+            return Response(data={'status':0,"msg": "category does not exist"},status=status.HTTP_404_NOT_FOUND)
         category_serializer = CategorySerializer(category)
         food_serializer = FoodSerializer(category.food_set.all(), many=True)
         response_data = category_serializer.data
         response_data['foods'] = food_serializer.data
-        return Response(response_data)    
+        return Response(data={'status':1,'data':response_data})
 
 
 
@@ -91,7 +108,7 @@ class VendorView(ViewSet):
     def list(self,request,*args,**kwargs):
         qs=Vendor.objects.all()
         serializer=VendorSerializer(qs,many=True)
-        return Response(data=serializer.data)
+        return Response(data={'status':1,'data':serializer.data})
     
 
     
@@ -99,14 +116,14 @@ class VendorView(ViewSet):
         try:
             vendor = Vendor.objects.get(pk=kwargs.get("pk"))
         except vendor.DoesNotExist:
-            return Response({"error": "vendor does not exist"},status=status.HTTP_404_NOT_FOUND)
+            return Response(data={'status':0,"msg": "vendor does not exist"},status=status.HTTP_404_NOT_FOUND)
         vendor_serializer=VendorSerializer(vendor)
         category_serializer=CategorySerializer(vendor.category_set.all(), many=True)
         review_serializer=RestaurantReviewSerializer(vendor.restaurantreview_set.all(), many=True)
         response_data=vendor_serializer.data
         response_data['categories'] = category_serializer.data
         response_data['reviews'] = review_serializer.data
-        return Response(response_data)
+        return Response(data={'status':1,'data':response_data})
     
     
     @action(methods=["post"],detail=True)
@@ -119,8 +136,10 @@ class VendorView(ViewSet):
 
         if serializer.is_valid():
             serializer.save(user=user,vendor=vendor_object)
-            return Response(data=serializer.data)
-        return Response(data=serializer.errors)
+            return Response(data={'status':1,'data':serializer.data})
+        error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+        return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)    
+        
     
 class FoodView(ViewSet):
     authentication_classes=[authentication.TokenAuthentication]
@@ -130,7 +149,7 @@ class FoodView(ViewSet):
     def list(self,request,*args,**kwargs):  
         qs=Food.objects.filter(is_active=True)
         serializer=FoodSerializer(qs,many=True)
-        return Response(data=serializer.data)
+        return Response(data={'status':1,'data':serializer.data})
     
     
     @action(methods=["post"],detail=True)
@@ -146,15 +165,16 @@ class FoodView(ViewSet):
             existing_cart_item.quantity+=new_quantity
             existing_cart_item.save()
             serializer=CartItemsSerializer(existing_cart_item)
-            return Response(data=serializer.data, status=status.HTTP_200_OK)
+            return Response(data={'status':1,'data':serializer.data})
         else:
             serializer=CartItemsSerializer(data=request.data)
             
             if serializer.is_valid():
                 serializer.save(cart=cart_object,food=food_object,is_active=True)
-                return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+                return Response(data={'status':1,'data':serializer.data})
             
-            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+            return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)    
         
 
     
@@ -168,8 +188,9 @@ class FoodView(ViewSet):
 
         if serializer.is_valid():
             serializer.save(user=user,food=food_object)
-            return Response(data=serializer.data)
-        return Response(data=serializer.errors)
+            return Response(data={'status':1,'data':serializer.data})
+        error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+        return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)    
     
      
 razorpay_client = razorpay.Client(auth=("rzp_test_dGbzyUivWJNxDV", "4iYJQWiT6WT7xYcl1JdHSD3a"))
@@ -184,7 +205,7 @@ class CartView(ViewSet):
         user = request.user.customer
         qs = Cart.objects.filter(user=user)
         serializer = CartSerializer(qs, many=True)
-        return Response(data=serializer.data)
+        return Response(data={'status':1,'data':serializer.data})
     
 
     @action(methods=["post"], detail=True)
@@ -222,19 +243,20 @@ class CartView(ViewSet):
                 }, status=status.HTTP_201_CREATED)
             except Exception as e:
                 print(e)
-                return Response({'error':'Error processing payment'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(data={'status':0,'msg':'Error processing payment'},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
+        return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)    
     
 
 class VendorSearchView(APIView):
     def post(self, request, format=None):
         address = request.data.get('location')
         if not address:
-            return Response({"error": "Address parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status':0,"msg": "Address parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
         vendors = Vendor.objects.filter(address__icontains=address)
         serializer = VendorSerializer(vendors, many=True)
-        return Response(serializer.data)
+        return Response(data={'status':1,'data':serializer.data})
     
     
 class FoodSearchView(APIView):
@@ -243,7 +265,7 @@ class FoodSearchView(APIView):
         type = request.data.get('type')
 
         if not food and not type:
-            return Response({"error": "At least one of 'food' or 'type' parameters is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'status':0,"msg": "At least one of 'food' or 'type' parameters is required."}, status=status.HTTP_400_BAD_REQUEST)
         filter_conditions = {}
         if food:
             filter_conditions['name__icontains'] = food
@@ -252,9 +274,9 @@ class FoodSearchView(APIView):
         foods = Food.objects.filter(**filter_conditions)
         if foods.exists():
             serializer = FoodSerializer(foods, many=True)
-            return Response(serializer.data)
+            return Response(data={'status':1,'data':serializer.data})
         else:
-            return Response({"message": "No food items found matching the search criteria."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(data={"status":0,"msg": "No food items found matching the search criteria."}, status=status.HTTP_404_NOT_FOUND)
 
 
 

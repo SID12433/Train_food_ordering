@@ -12,8 +12,7 @@ router.register("profile",views.ProfileView,basename="profile")
 
 urlpatterns=[
     path("register/",views.VendorCreationView.as_view(),name="signin"),
-    path("token/",ObtainAuthToken.as_view(),name="token"),
-    path("logout/",views.sign_out,name="logout"),
+    path('token/',views.CustomAuthToken.as_view(), name='token'),
     
     
     

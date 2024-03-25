@@ -11,7 +11,7 @@ router.register("orders",views.OrdersView,basename="orders_list")
 
 
 urlpatterns = [
-    path("token/",ObtainAuthToken.as_view(),name="token"),
+    path('token/',views.CustomAuthToken.as_view(), name='token'),
 
     
 ] +router.urls

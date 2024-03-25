@@ -12,8 +12,9 @@ class CustomUser(AbstractUser):
     user_type_choices=[
         ('customer', 'customer'),
         ('vendor' ,'vendor'),
+        ('admin' ,'admin')
     ]
-    user_type=models.CharField(max_length=50,choices=user_type_choices,default='customer')
+    user_type=models.CharField(max_length=50,choices=user_type_choices)
     phone=models.CharField(max_length=10)
 
 
