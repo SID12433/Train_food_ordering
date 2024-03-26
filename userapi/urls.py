@@ -9,6 +9,7 @@ router.register("vendors",views.VendorView,basename="vendor_list")
 router.register("food",views.FoodView,basename="food")
 router.register("cart",views.CartView,basename="cart_list")
 router.register("profile",views.ProfileView,basename="profile")
+router.register("orders",views.OrderView,basename="orders")
 
 
 urlpatterns = [

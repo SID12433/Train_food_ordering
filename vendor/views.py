@@ -20,6 +20,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView,status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from pyotp import TOTP
+import pyotp
+from twilio.rest import Client
+
 
 
 from django.shortcuts import render
@@ -259,6 +263,58 @@ class OrderView(ViewSet):
         qs=Order.objects.filter(cart__cartitem__food__vendor=vendor_id)
         serializer=OrderSerializer(qs,many=True)
         return Response(data={'status':1,'data':serializer.data})
-           
+    
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Order.objects.get(id=id)
+        serializer=OrderSerializer(qs)
+        return Response(data={'status':1,'data':serializer.data})
+    
+    # @action(methods=["post"],detail=True)
+    # def order_delivered(self, request, *args, **kwargs):
+    #     order_id = kwargs.get("pk")
+    #     try:
+    #         order_obj = Order.objects.get(id=order_id)
+    #     except Order.DoesNotExist:
+    #         return Response(data={'status':0,"msg": "order not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     order_obj.status = "delivered"
+    #     order_obj.save()
+    #     return Response(data={'status':1,"msg": "order delivered successfully"}, status=status.HTTP_200_OK)
+    
+    
 
+
+        
+    @action(methods=["post"],detail=True)
+    def order_delivered(self, request, *args, **kwargs):
+        order_id = kwargs.get("pk")
+        try:
+            order_obj = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response(data={'status': 0, "msg": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        phone_number = '+91 your phone number'
+
+        secret = pyotp.random_base32()
+        otp_secret_key =secret
+        totp = TOTP(otp_secret_key)
+        otp_code = totp.now()
+
+        def send_otp_via_sms(phone_number, otp_code):
+            account_sid = 'your account sid'
+            auth_token = 'your token'
+            twilio_phone_number = 'your tilio account number'
+
+            client = Client(account_sid, auth_token)
+            message = client.messages.create(
+                body=f'Your OTP is: {otp_code}',
+                from_=twilio_phone_number,
+                to=phone_number
+            )
+
+        send_otp_via_sms(phone_number, otp_code)
+
+        order_obj.status = "delivered"
+        order_obj.save()
+        return Response(data={'status': 1, "msg": "Order delivered successfully"}, status=status.HTTP_200_OK)
    
+    

@@ -247,6 +247,25 @@ class CartView(ViewSet):
 
         error_messages = ' '.join([error for errors in serializer.errors.values() for error in errors])
         return Response(data={'status':0,'msg': error_messages}, status=status.HTTP_400_BAD_REQUEST)    
+
+
+class OrderView(ViewSet):
+    authentication_classes=[authentication.TokenAuthentication]
+    permission_classes=[permissions.IsAuthenticated]
+
+
+    def list(self,request,*args,**kwargs):
+        user_id=request.user.id
+        qs=Order.objects.filter(user=user_id)
+        serializer=OrderSerializer(qs,many=True)
+        return Response(data={'status':1,'data':serializer.data})
+    
+    def retrieve(self,request,*args,**kwargs):
+        id=kwargs.get("pk")
+        qs=Order.objects.get(id=id)
+        serializer=OrderSerializer(qs)
+        return Response(data={'status':1,'data':serializer.data})
+
     
 
 class VendorSearchView(APIView):

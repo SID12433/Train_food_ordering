@@ -43,6 +43,7 @@ class Customer(CustomUser):
     profile_picture = models.ImageField(upload_to='images', null=True)
     bio = models.TextField(blank=True)
     address = models.CharField(max_length=255, blank=True)
+    phoneno=models.CharField(max_length=10)
     # location = models.PointField(blank=True, null=True)
 
     def __str__(self):

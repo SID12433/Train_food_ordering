@@ -118,6 +118,7 @@ class CartSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     food_items = serializers.SerializerMethodField()
+    user=serializers.CharField(source='user.name', read_only=True)
 
     class Meta:
         model = Order
