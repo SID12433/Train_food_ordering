@@ -304,9 +304,10 @@ class OrderView(ViewSet):
             auth_token = 'your token'
             twilio_phone_number = 'your tilio account number'
 
+
             client = Client(account_sid, auth_token)
             message = client.messages.create(
-                body=f'Your OTP is: {otp_code}',
+                body=f'Thank you for ordering from us..Your OTP is: {otp_code} ..please submit this otp to our delivering guy',
                 from_=twilio_phone_number,
                 to=phone_number
             )
