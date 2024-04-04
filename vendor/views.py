@@ -292,7 +292,7 @@ class OrderView(ViewSet):
             order_obj = Order.objects.get(id=order_id)
         except Order.DoesNotExist:
             return Response(data={'status': 0, "msg": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-        phone_number = '+91 your phone number'
+        phone_number = ''
 
         secret = pyotp.random_base32()
         otp_secret_key =secret
@@ -300,9 +300,9 @@ class OrderView(ViewSet):
         otp_code = totp.now()
 
         def send_otp_via_sms(phone_number, otp_code):
-            account_sid = 'your account sid'
-            auth_token = 'your token'
-            twilio_phone_number = 'your tilio account number'
+            account_sid = ''
+            auth_token = ''
+            twilio_phone_number = ''
 
 
             client = Client(account_sid, auth_token)
